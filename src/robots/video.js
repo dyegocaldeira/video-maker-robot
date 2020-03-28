@@ -1,5 +1,11 @@
 const state = require('./state');
 const gm = require('gm').subClass({ imageMagick: true });
+const videoshow = require("videoshow");
+const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
+const ffprobePath = require("@ffprobe-installer/ffprobe").path;
+let ffmpeg = require("fluent-ffmpeg");
+ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobePath);
 
 async function robot() {
 
@@ -8,6 +14,7 @@ async function robot() {
     await converAllImages(content);
     await createAllSentenceImages(content);
     await createYouTubeThumbnail(content);
+    await renderVideoWithNode(content);
 
     state.save(content);
 
@@ -156,6 +163,73 @@ async function robot() {
                     resolve()
                 })
         })
+    }
+
+    async function createAfterEffectsScript(content) {
+
+        await state.saveScript(content);
+    }
+
+    async function renderVideoWithNode(content) {
+
+        let images = [];
+
+        for (let sentenceIndex = 0; sentenceIndex < content.sentences.length; sentenceIndex++) {
+
+            images.push({
+                path: `./content/${sentenceIndex}-converted.png`,
+                caption: content.sentences[sentenceIndex].text
+            });
+        }
+
+        const videoOptions = {
+            fps: 60,
+            loop: 5, // seconds
+            transition: true,
+            transitionDuration: 5, // seconds
+            videoBitrate: 1024,
+            videoCodec: "libx264",
+            size: "1920x1080",
+            audioBitrate: "128k",
+            audioChannels: 2,
+            format: "mp4",
+            pixelFormat: "yuv420p",
+            useSubRipSubtitles: false, // Use ASS/SSA subtitles instead
+            subtitleStyle: {
+                Fontname: "Arial",
+                Fontsize: "30",
+                PrimaryColour: "11861244",
+                SecondaryColour: "11861244",
+                TertiaryColour: "11861244",
+                BackColour: "-2147483640",
+                Bold: "2",
+                Italic: "0",
+                BorderStyle: "2",
+                Outline: "2",
+                Shadow: "3",
+                Alignment: "1", // left, middle, right
+                MarginL: "40",
+                MarginR: "60",
+                MarginV: "40"
+            }
+        };
+
+        videoshow(images, videoOptions)
+            // .audio("song.mp3")
+            .save("video2.mp4")
+            .on("start", function (command) {
+
+                console.log("ffmpeg process started:", command);
+            })
+            .on("error", function (err, stdout, stderr) {
+
+                console.error("Error:", err);
+                console.error("ffmpeg stderr:", stderr);
+            })
+            .on("end", function (output) {
+
+                console.error("Video created in:", output);
+            });
     }
 }
 
