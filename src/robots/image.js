@@ -24,8 +24,6 @@ async function robot() {
         }
     };
 
-    // console.dir(content.sentence, { depth: null });
-
     async function fetchGoogleAndReturnImagesLinks(query) {
 
         const response = await customSearch.cse.list({
@@ -33,7 +31,7 @@ async function robot() {
             cx: googleSearchCredential.searchEngineId,
             q: query,
             searchType: 'image',
-            num: 2
+            num: 3
         });
 
         const imagesUrl = response.data.items.map(item => item.link);
@@ -47,10 +45,10 @@ async function robot() {
 
         for (const [sentenceIndex, sentence] of content.sentences.entries()) {
 
-            for (const [imageindex, imageUrl] of sentence.images.entries()) {
-                // for (let imageindex = 0; imageindex < 2; imageindex++) {
+            for (const [imageIndex, imageUrl] of sentence.images.entries()) {
+                // for (let imageIndex = 0; imageIndex < 2; imageIndex++) {
 
-                // const imageUrl = sentence.images[imageindex];
+                // const imageUrl = sentence.images[imageIndex];
 
                 try {
 
@@ -59,14 +57,16 @@ async function robot() {
                         throw new Error('Image already downloaded');
                     }
 
-                    await downloadImageAndSave(imageUrl, `${sentenceIndex}-${imageindex}-original.jpeg`);
+                    const ext = null// /\.([^./]+)$/.exec(imageUrl);
+
+                    await downloadImageAndSave(imageUrl, `${sentenceIndex}-original${ext ? ext[0] : '.png'}`);
 
                     content.downloadedImages.push(imageUrl);
 
-                    console.log(`> [image-robot] [${sentenceIndex}] [${imageindex}] Image successfully downloaded: ${imageUrl}`);
+                    console.log(`> [image-robot] [${sentenceIndex}] [${imageIndex}] Image successfully downloaded: ${imageUrl}`);
                 } catch (err) {
 
-                    console.log(`> [image-robot] [${sentenceIndex}] [${imageindex}] Error ${imageUrl}: ${err}`);
+                    console.log(`> [image-robot] [${sentenceIndex}] [${imageIndex}] Error ${imageUrl}: ${err}`);
                 }
             }
         }
@@ -79,6 +79,7 @@ async function robot() {
             dest: `./content/${fileName}`
         });
     }
+
 }
 
 module.exports = robot;
