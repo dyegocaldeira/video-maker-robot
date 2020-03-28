@@ -109,3 +109,7 @@ src/credentials/*.json
 *.json
 
 /content/*
+
+/src/templates
+
+video*.mp4
