@@ -4,8 +4,11 @@ const youtube = google.youtube({ version: 'v3' });
 const OAuth2 = google.auth.OAuth2;
 const express = require('express');
 const fs = require('fs');
+const credential = require('../credentials/client_secret_677170794300-68mkad9ti8tgro7nik51pqi7igmna00v.apps.googleusercontent.com.json');
 
 async function robot() {
+
+    console.log(`> [YouTube-robot] Starting ...`);
 
     const content = state.load();
 
@@ -32,7 +35,7 @@ async function robot() {
 
                 const server = app.listen(port, () => {
 
-                    console.log(`> Listening on http://localhost:${port}`);
+                    console.log(`> [YouTube-robot] Listening on http://localhost:${port}`);
 
                     resolve({
                         app,
@@ -43,8 +46,6 @@ async function robot() {
         }
 
         async function createOAuthClient() {
-
-            const credential = require('../credentials/client_secret_677170794300-68mkad9ti8tgro7nik51pqi7igmna00v.apps.googleusercontent.com.json');
 
             const OAuthClient = new OAuth2(
                 credential.web.client_id,
@@ -62,7 +63,7 @@ async function robot() {
                 scope: ['https://www.googleapis.com/auth/youtube']
             });
 
-            console.log(`> Please give your consent: ${consentUrl}`);
+            console.log(`> [YouTube-robot] Please give your consent: ${consentUrl}`);
         }
 
         async function waitForGoogleCallback() {
@@ -75,7 +76,7 @@ async function robot() {
 
                     const authCode = req.query.code;
 
-                    console.log(`> Consent given: ${authCode}`);
+                    console.log(`> [YouTube-robot] Consent given: ${authCode}`);
 
                     res.send('<h1>Thank you!</h1></br><p>Now close this tab.</p>');
 
@@ -94,8 +95,7 @@ async function robot() {
                         return reject(err);
                     }
 
-                    console.log(`> Access tokens received;`);
-                    // console.log(tokens)
+                    console.log(`> [YouTube-robcot] Access tokens received!`);
 
                     OAuthClient.setCredentials(tokens);
                     resolve();
@@ -112,7 +112,7 @@ async function robot() {
 
         async function stopWebServer(webServer) {
 
-            return new Promise((resolve, reject) => {
+            return new Promise(resolve => {
 
                 webServer.server.close(() => resolve());
             });
@@ -121,7 +121,8 @@ async function robot() {
 
     async function uploadVideo(content) {
 
-        const videoFilePath = './video.mp4';
+        const { prefix, searchTerm } = content;
+        const videoFilePath = `./${prefix}-${searchTerm}.mp4`;
         const videoFileSize = fs.statSync(videoFilePath).size;
         const videoTitle = `${content.prefix} ${content.searchTerm}`;
         const videoTags = [content.searchTerm, ...content.sentences[0].keywords];
@@ -144,18 +145,20 @@ async function robot() {
             }
         };
 
+        console.log(`> [YouTube-robot] Starting Starting to upload the video to YouTube.`);
+
         const youtubeResponse = await youtube.videos.insert(requestParameters, {
             onUploadProgress
         });
 
-        console.log(`> Video available at: https://youtu.be/${youtubeResponse.data.id}`);
+        console.log(`> [YouTube-robot] Video available at: https://youtu.be/${youtubeResponse.data.id}`);
 
         return youtubeResponse.data;
 
         function onUploadProgress(event) {
 
             const progress = Math.round((event.bytesRead / videoFileSize) * 100);
-            console.log(`> ${progress}% complete...`);
+            console.log(`> [YouTube-robot] ${progress}% complete...`);
         }
     }
 
@@ -173,7 +176,7 @@ async function robot() {
         }
 
         const youtubeResponse = await youtube.thumbnails.set(requestParameters)
-        console.log(`> [youtube-robot] Thumbnail uploaded!`)
+        console.log(`> [YouTube-robot] Thumbnail uploaded!`)
     }
 }
 
