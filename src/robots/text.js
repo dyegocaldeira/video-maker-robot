@@ -17,6 +17,8 @@ const state = require('./state.js');
 
 async function robot() {
 
+    console.log(`> [Text-robot] Starting ...`);
+
     const content = state.load();
 
     await fetchContentFromWikipedia(content);
@@ -29,6 +31,8 @@ async function robot() {
 
     async function fetchContentFromWikipedia(content) {
 
+        console.log(`> [Text-robot] Fetching content from Wikipedia ...`);
+
         const algorithmiaAuthenticated = Algorithmia.client(algorithmiaApiKey);
         const wikipediaAlgorithm = algorithmiaAuthenticated.algo('web/WikipediaParser/0.1.2');
         const wikipediaResponse = await wikipediaAlgorithm.pipe({
@@ -38,6 +42,8 @@ async function robot() {
         const wikipediaContent = wikipediaResponse.get();
 
         content.sourceContentOriginal = wikipediaContent.content;
+
+        console.log(`> [Text-robot] Fetching done!`);
     }
 
     function sanitizeContent(content) {
@@ -91,15 +97,15 @@ async function robot() {
 
     async function fetchKeywordsOfAllSentences(content) {
 
-        console.log('> [text-robot] Starting to fetch keywords from Watson')
+        console.log('> [Text-robot] Starting to fetch keywords from Watson')
 
         for (const sentence of content.sentences) {
 
-            console.log(`> [text-robot] Sentence: "${sentence.text}"`)
+            console.log(`> [Text-robot] Sentence: "${sentence.text}"`)
 
             sentence.keywords = await fetchWatsonAndReturnKeywords(sentence.text)
 
-            console.log(`> [text-robot] Keywords: ${sentence.keywords.join(', ')}\n`)
+            console.log(`> [Text-robot] Keywords: ${sentence.keywords.join(', ')}\n`)
         }
     }
 
@@ -114,9 +120,7 @@ async function robot() {
 
         const analysisResults = await nlu.analyze(analyzeParams);
 
-        const keywords = analysisResults.result.keywords.map(keyword => keyword.text);
-
-        return keywords;
+        return analysisResults.result.keywords.map(keyword => keyword.text);;
     }
 }
 

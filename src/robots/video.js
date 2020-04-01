@@ -6,8 +6,13 @@ const ffprobePath = require("@ffprobe-installer/ffprobe").path;
 let ffmpeg = require("fluent-ffmpeg");
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
+const fs = require('fs');
+const path = require('path')
 
 async function robot() {
+
+    console.log(`> [Video-robot] Starting ...`);
+
 
     const content = state.load();
 
@@ -27,7 +32,7 @@ async function robot() {
                 await convertImage(sentenceIndex);
             } catch (err) {
 
-                Promise.resolve();
+                Promise.resolve(`> [Video-robot] Converted error: ${err}`);
             }
         }
     }
@@ -36,8 +41,14 @@ async function robot() {
 
         return new Promise((resolve, reject) => {
 
-            const inputFile = `./content/${sentenceIndex}-original.png`;
-            const outputFile = `./content/${sentenceIndex}-converted.png`;
+            const inputFile = path.resolve(__dirname, '..', '..', 'content', `${content.searchTerm}`, `${sentenceIndex}-original.png`);
+
+            if (!fs.existsSync(inputFile)) {
+
+                return reject();
+            }
+
+            const outputFile = path.resolve(__dirname, '..', '..', 'content', `${content.searchTerm}`, `${sentenceIndex}-converted.png`);
             const width = 1920;
             const height = 1080;
 
@@ -64,11 +75,11 @@ async function robot() {
                 .write(outputFile, error => {
 
                     if (error) {
-
+                        console.log(`error: ${error}`)
                         return reject(error);
                     }
 
-                    console.log(`> [video-robot] Image converted: ${outputFile}`);
+                    console.log(`> [Video-robot] Image converted: ${outputFile}`);
                     resolve();
                 })
         });
@@ -92,7 +103,7 @@ async function robot() {
 
         return new Promise((resolve, reject) => {
 
-            const outputFile = `./content/${sentenceIndex}-sentence.png`;
+            const outputFile = `./content/${content.searchTerm}/${sentenceIndex}-sentence.png`;
 
             const templateSettings = {
                 0: {
@@ -140,7 +151,7 @@ async function robot() {
                         return reject(error)
                     }
 
-                    console.log(`> [video-robot] Sentence created: ${outputFile}`)
+                    console.log(`> [Video-robot] Sentence created: ${outputFile}`)
                     resolve()
                 })
         })
@@ -151,15 +162,15 @@ async function robot() {
         return new Promise((resolve, reject) => {
 
             gm()
-                .in('./content/0-converted.png')
-                .write('./content/youtube-thumbnail.jpg', (error) => {
+                .in(`./content/${content.searchTerm}/0-converted.png`)
+                .write(`./content/${content.searchTerm}/youtube-thumbnail.jpg`, (error) => {
 
                     if (error) {
 
                         return reject(error)
                     }
 
-                    console.log('> [video-robot] YouTube thumbnail created')
+                    console.log('> [Video-robot] YouTube thumbnail created')
                     resolve()
                 })
         })
@@ -172,63 +183,97 @@ async function robot() {
 
     async function renderVideoWithNode(content) {
 
-        let images = [];
+        const images = [];
 
         for (let sentenceIndex = 0; sentenceIndex < content.sentences.length; sentenceIndex++) {
 
-            images.push({
-                path: `./content/${sentenceIndex}-converted.png`,
-                caption: content.sentences[sentenceIndex].text
-            });
+            if (fs.existsSync(`./content/${content.searchTerm}/${sentenceIndex}-converted.png`)) {
+
+                images.push({
+                    path: `./content/${content.searchTerm}/${sentenceIndex}-converted.png`,
+                    caption: content.sentences[sentenceIndex].text,
+                    transition: true,
+                    transitionDuration: 1, // seconds, 
+                });
+            }
         }
 
         const videoOptions = {
-            fps: 60,
-            loop: 5, // seconds
+            captionDelay: 2000,
+            fps: 50,
+            loop: 15, // seconds
             transition: true,
-            transitionDuration: 5, // seconds
+            transitionDuration: 1, // seconds
             videoBitrate: 1024,
-            videoCodec: "libx264",
-            size: "1920x1080",
-            audioBitrate: "128k",
+            videoCodec: 'libx264',
+            size: '1920x1080',
+            audioBitrate: '128k',
             audioChannels: 2,
-            format: "mp4",
-            pixelFormat: "yuv420p",
+            format: 'mp4',
+            pixelFormat: 'yuv420p',
             useSubRipSubtitles: false, // Use ASS/SSA subtitles instead
             subtitleStyle: {
-                Fontname: "Arial",
-                Fontsize: "30",
-                PrimaryColour: "11861244",
-                SecondaryColour: "11861244",
-                TertiaryColour: "11861244",
-                BackColour: "-2147483640",
-                Bold: "2",
-                Italic: "0",
-                BorderStyle: "2",
-                Outline: "2",
-                Shadow: "3",
-                Alignment: "1", // left, middle, right
-                MarginL: "40",
-                MarginR: "60",
-                MarginV: "40"
+                Fontname: 'Arial',
+                Fontsize: '40',
+                PrimaryColour: '11861244',
+                SecondaryColour: '11861244',
+                TertiaryColour: '11861244',
+                BackColour: '-2147483640',
+                Bold: '2',
+                Italic: '0',
+                BorderStyle: '2',
+                Outline: '2',
+                Shadow: '3',
+                Alignment: '1', // left, middle, right
+                MarginL: '40',
+                MarginR: '60',
+                MarginV: '40'
             }
         };
 
+        // const audioParams = {
+        //     fade: true,
+        //     delay: 2,
+        //     volume: 5
+        // }
+
+        // const logoParams = {
+        //     start: 0,
+        //     end: 10,
+        //     xAxis: 20,
+        //     yAxis: 20
+        // }
+
+        console.log(`> [Video-robot] Starting render video...`);
+
+        let lastPercent;
+
+        const { searchTerm, prefix } = content;
+
         videoshow(images, videoOptions)
-            // .audio("song.mp3")
-            .save("video2.mp4")
-            .on("start", function (command) {
+            // .audio('/home/osboxes/repositories/video-maker-robot/src/templates/1/newsroom.mp3', audioParams)
+            // .logo(`./content/youtube-thumbnail.jpg`, logoParams)
+            .save(`./content/${content.searchTerm}/${prefix}-${searchTerm}.mp4`)
+            .on('error', (err, stdout, stderr) => {
 
-                console.log("ffmpeg process started:", command);
+                console.error('Error:', err);
+                console.error('ffmpeg stderr:', stderr);
             })
-            .on("error", function (err, stdout, stderr) {
+            .on('progress', progress => {
 
-                console.error("Error:", err);
-                console.error("ffmpeg stderr:", stderr);
+                const percent = Math.round(progress.percent);
+
+                if (lastPercent !== percent) {
+
+                    lastPercent = percent;
+
+                    console.log(`> [Video-robot] Render processing: ${percent}%`);
+                }
             })
-            .on("end", function (output) {
+            .on('end', output => {
 
-                console.error("Video created in:", output);
+                // console.error('Video created in:', output);
+                console.log(`> [Video-robot] Rendering finished!`);
             });
     }
 }
